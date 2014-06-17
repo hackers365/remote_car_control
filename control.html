@@ -1,0 +1,215 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Smart Car Control System</title>
+</head>
+<style>
+body{text-align:center;}
+table{
+    border:1px #003366 solid;
+    border-collapse: collapse;
+
+}
+.t_l,.t_c,.t_r{width:180px;}
+
+.t_l,.m_l,.b_l{height:180px;}
+
+td{
+    text-align:center;
+}
+td img{
+   width: 80px;
+   height: 80px;
+}
+
+.t_l img{
+    -moz-transform:rotate(-45deg);
+    -webkit-transform: rotate(-45deg);
+    -o-transform: rotate(-45deg);
+    }
+
+.t_r img{
+    -moz-transform:rotate(45deg);
+    -webkit-transform: rotate(45deg);
+    -o-transform: rotate(45deg);
+    }
+
+.m_r img{
+    -moz-transform:rotate(90deg);
+    -webkit-transform: rotate(90deg);
+    -o-transform: rotate(90deg);
+    }
+.m_l img{
+    -moz-transform:rotate(-90deg);
+    -webkit-transform: rotate(-90deg);
+    -o-transform: rotate(-90deg);
+    }
+
+.b_l img{
+    -moz-transform:rotate(-135deg);
+    -webkit-transform: rotate(-135deg);
+    -o-transform: rotate(-135deg);
+    }
+
+.b_c img{
+    -moz-transform:rotate(-180deg);
+    -webkit-transform: rotate(-180deg);
+    -o-transform: rotate(-180deg);
+    }
+
+.b_r img{
+    -moz-transform:rotate(135deg);
+    -webkit-transform: rotate(135deg);
+    -o-transform: rotate(135deg);
+    }
+
+</style>
+<body>
+<div style="float:left">
+
+<div id="info"></div>
+<table>
+    <tr>
+        <td class="t_l"><img class="control img_t_l" code="x" src="back1.png" /></td>
+        <td class="t_c"><img class="control forward" code="forward" src="back1.png" /></td>
+        <td class="t_r"><img class="control img_t_r" code="w" src="back1.png" /></td>
+    </tr>
+    <tr>
+        <td class="m_l"><img class="control left" code="left" src="back1.png" /></td>
+        <td class="m_c"><img class="control stop" code="stop" src="stop.jpg" /></td>
+        <td class="m_r"><img class="control right" code="right" src="back1.png" /></td>
+    </tr>
+    <tr>
+        <td class="b_l"><img class="control img_b_l" code="y" src="back1.png" /></td>
+        <td class="b_c"><img class="control backward" code="backward" src="back1.png" /></td>
+        <td class="b_r"><img class="control img_b_r" code="z" src="back1.png" /></td>
+    </tr>
+</table>
+</div>
+
+<div style="float:left;text-align:left">
+    <a id="monitor" style="margin-left:200px;">打开监控</a>
+    <div id="monitor_cap">
+    </div>
+</div>
+<div id="gravity">
+
+</div>
+<div id="status_info"></div>
+
+<script src="jquery-1.8.1.min.js"></script>
+    <script type="text/javascript">
+        var status = '',
+            t;
+        function send_cmd() {
+            var $this = $(this);
+                text = $this.attr('code'),
+                ch = text.slice(0, 1);
+            //这里正在处理，不能接受其它请求
+            $('#gravity').data('is_ajax', '1');
+            $.get('/control', {status: ch}, function(str) {
+                //这里清除正在处理标志位
+                $('#gravity').removeData('is_ajax');
+                status = text;
+
+                $('#info').text(text + '   ' + str);
+                $('.green').removeClass('green').attr('src', 'back1.png');
+                if (text != 'stop') {
+                    $this.addClass('green');
+                    $this.attr('src', 'back2.png');
+                }
+
+            });
+        }
+        function get_monitor_html() {
+            var html='<iframe src="http://192.168.100.199:8081/" width="400" height="300"></iframe>';
+            return html;
+        }
+        function monitor() {
+            var text = '';
+            if ($('#monitor_cap').find('iframe').length) {
+                $('#monitor_cap').html('');
+                text = '打开监控';
+            } else {
+                $('#monitor_cap').append(get_monitor_html());
+                text = '关闭监控';
+            }
+            $('#monitor').text(text);
+        }
+        $(document)
+        .on('click touchstart', '.control', send_cmd)
+        .on('click touchstart', '#monitor', monitor);
+
+        //判断是往前还是后
+        function f_b(e) {
+            //这里多20
+            var beta = (e.beta>>0) - 20;
+            if (beta > 15) {
+                return 'b';
+            }
+            if (beta < -15) {
+                return 'f';
+            }
+            return '';
+        }
+
+        //判断是往左还是右
+        function l_r(e) {
+            if (e.gamma < -20) {
+                return 'l';
+            }
+            if (e.gamma > 20) {
+                return 'r';
+            }
+            return '';
+        }
+
+        function process_control($target) {
+            if ($target.attr('code') == status || $('#gravity').data('is_ajax')) {
+                return;
+            }
+            $target.click();
+            /*
+            if (typeof t != 'undefined') {
+                window.clearTimeout(t);
+            }
+            t = window.setTimeout(function($t){ $t.click();}, 200, $target);
+            */
+        }
+
+        $(function() {
+            window.ondeviceorientation = function(e) {
+                var fb = f_b(e),
+                    lr = l_r(e);
+                if (!fb && !lr) {
+                    process_control($('.stop'));
+                }
+                $('#status_info').text('fb:' + fb + '  lr:' + lr);
+                if (fb == 'f' && lr == '') {
+                    process_control($('.forward'));
+                } else if(fb == 'f' && lr == 'l') {
+                    process_control($('.img_t_l'));
+                } else if(fb == 'f' && lr == 'r') {
+                    process_control($('.img_t_r'));
+                } else if(fb == 'b' && lr == 'l') {
+                    process_control($('.img_b_l'));
+                } else if(fb == 'b' && lr == 'r') {
+                    process_control($('.img_b_r'));
+                } else if(fb == 'b' && lr == '') {
+                    process_control($('.backward'));
+                } else if(fb == '' && lr == 'l') {
+                    process_control($('.left'))
+                } else if(fb == '' && lr == 'r') {
+                    process_control($('.right'))
+                } else {
+                    process_control($('.stop'));
+                }
+
+
+                $('#gravity').text('alpha: ' + (e.alpha>>0) + ' beta:' + (e.beta>>0) + ' gamma:' + (e.gamma>>0));
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>小车控制系统</title>
+    </head>
+    <body>
+        <div><span id="info"></span></div>
+        <a id="forward" class="control">forward</a>
+        <a id="backward" class="control">backward</a>
+        <a id="turn_left" class="control">left</a>
+        <a id="turn_right" class="control">right</a>
+        <a id="stop" class="control">stop</a>
+        <a id="monitor">打开监控</a>
+        <div id="monitor_cap"></div>
+
+
+        <script src="jquery-1.8.1.min.js"></script>
+        <script type="text/javascript">
+            function send_cmd() {
+                var text = $(this).text();
+                    ch = text.slice(0, 1);
+                $.get('/control', {status: ch}, function(str) {
+                    $('#info').text(text + '   ' + str);
+                });
+            }
+            function get_monitor_html() {
+                var html='<iframe src="http://192.168.100.199:8081/" width="400" height="300"></iframe>';
+                return html;
+            }
+            function monitor() {
+                var text = '';
+                if ($('#monitor_cap').find('iframe').length) {
+                    $('#monitor_cap').html('');
+                    text = '打开监控';
+                } else {
+                    $('#monitor_cap').append(get_monitor_html());
+                    text = '关闭监控';
+                }
+                $('#monitor').text(text);
+            }
+            $(document)
+            .on('click touchstart', '.control', send_cmd)
+            .on('click touchstart', '#monitor', monitor);
+
+        </script>
+    </body>
+</html>
